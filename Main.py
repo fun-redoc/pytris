@@ -1,11 +1,10 @@
 import pygame
 import random
-import array
 import typing
 import copy
 
 # globals
-TETRIS = "TETRIS"
+TITLE = "Py-Tris"
 LABEL_FONT = "comicsans"
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 700
@@ -248,9 +247,9 @@ def draw_next_shape(win, shape):
 def draw_game(win, occupied_positions, current_shape, next_shape):
     win.fill(BLACK)
 
-    # draw tetris label
+    # draw TITLE label
     font = pygame.font.SysFont(LABEL_FONT, 60, bold=True, italic=False)
-    label = font.render(TETRIS, True, WHITE)
+    label = font.render(TITLE, True, WHITE)
     win.blit(label, (top_left_x + GRID_WIDTH / 2 - (label.get_width() / 2), BLOCK_SIZE))
 
     draw_shapes(win, occupied_positions, current_shape)
@@ -335,6 +334,6 @@ def main(win):
 
 if __name__ == '__main__':
     surface = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption('Tetris')
+    pygame.display.set_caption(TITLE)
     pygame.font.init()
     main(surface)
