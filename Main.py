@@ -1,6 +1,4 @@
-# import pygame
-# import random
-import copy
+#import copy
 
 # from definitions import *
 # from Shape import *
@@ -11,11 +9,9 @@ from drawing import *
 
 def main(win):
     game_state = GameState(occupied_positions={}
-                           , need_new_shape=False
                            , running=True
                            , current_shape=new_shape()
                            , next_shape=new_shape()
-                           , falling=False
                            , fall_time=0
                            , fall_speed=INITIAL_FALL_SPEED
                            )
