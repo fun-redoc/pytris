@@ -1,5 +1,6 @@
 # globals
 TITLE = "Py-Tris"
+SCORE_LABEL = "Score: "
 LABEL_FONT = "comicsans"
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 700

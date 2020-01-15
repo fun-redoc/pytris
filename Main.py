@@ -37,7 +37,7 @@ def main(win):
         (state_handler, game_state) = state_handler.update(game_state)
 
         # draw
-        draw_game(win, game_state.occupied_positions, game_state.current_shape, game_state.next_shape)
+        draw_game(win, game_state) #.occupied_positions, game_state.current_shape, game_state.next_shape)
 
     pygame.display.quit()
 

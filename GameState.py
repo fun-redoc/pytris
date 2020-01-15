@@ -52,6 +52,9 @@ def glue_current_shape_and_clear_rows_while_counting_score(state: GameState) -> 
                     state.occupied_positions[(x, y1+1)] = state.occupied_positions[(x, y1)]
                     del state.occupied_positions[(x, y1)]
 
+    # count score
+    state.score += len(k5)
+
     return state
 
 
