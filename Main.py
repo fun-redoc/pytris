@@ -8,6 +8,11 @@ from drawing import *
 
 
 def main(win):
+    s = Shape(0, GRID_HEIGHT, I)
+    s.rotation = 1
+    testpos = {(0, GRID_HEIGHT-2): s, (0, GRID_HEIGHT-4):s
+              ,(2, GRID_HEIGHT-2): s, (2, GRID_HEIGHT-5):s
+              }
     game_state = GameState(occupied_positions={}
                            , running=True
                            , current_shape=new_shape()

@@ -3,6 +3,7 @@ from Shape import *
 from definitions import *
 import random
 
+
 def grid_pos(x, y):
     assert not to_grid_pos(x, y) is None
     return x + (y * GRID_WIDTH)
