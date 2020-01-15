@@ -3,9 +3,10 @@
 game clone written for testing pygame
 
 # Working
-+ count score
++ proper game over screen
 
 # Done
++ count score
 + release full rows
 + refactor to using proper game state instead of globals
 + game frame
@@ -14,7 +15,6 @@ game clone written for testing pygame
 + game loss condition
 
 # ToDo
-+ proper game over screen
 + proper game start screen
 + multpile users
 + high score screen
