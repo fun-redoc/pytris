@@ -3,9 +3,10 @@
 game clone written for testing pygame
 
 # Working
-+ proper game over screen
++ build a kivy drawing handler
 
 # Done
++ proper game over screen
 + count score
 + release full rows
 + refactor to using proper game state instead of globals

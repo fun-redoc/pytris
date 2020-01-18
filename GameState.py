@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 import pygame
 
+import GameState
 from logic import *
 from itertools import *
 from more_itertools import *
@@ -12,6 +13,8 @@ from more_itertools import *
 
 @dataclass()
 class GameState(object):
+    state_handlers: Dict[str, ForwardRef("StateProtocol")]
+    current_handler: ForwardRef("StateProtocol")
     occupied_positions: Dict[Tuple[int, int], Shape]
     running: bool
     current_shape: Shape
@@ -46,10 +49,10 @@ def glue_current_shape_and_clear_rows_while_counting_score(state: GameState) -> 
     # slide blocks downwards
     k6 = sorted(k5, reverse=False)
     for y in k6:
-        for y1 in range(y-1, -1, -1):
+        for y1 in range(y - 1, -1, -1):
             for x in range(GRID_WIDTH):
-                if is_within_grid(x,y1) and (x, y1) in state.occupied_positions:
-                    state.occupied_positions[(x, y1+1)] = state.occupied_positions[(x, y1)]
+                if is_within_grid(x, y1) and (x, y1) in state.occupied_positions:
+                    state.occupied_positions[(x, y1 + 1)] = state.occupied_positions[(x, y1)]
                     del state.occupied_positions[(x, y1)]
 
     # count score
@@ -69,42 +72,70 @@ def move_shape(state: GameState) -> Tuple[bool, GameState]:
     return True, state
 
 
-class StateProtocol(Protocol):
+#class StateProtocol(Protocol):
+class StateProtocol(object):
+
+    draw_internal: Callable[[GameState], None]
+
+#    def __init__(self, draw_fn: Callable[[GameState], None]):
+#        self.draw_internal = draw_fn
+
+    def set_draw(self, draw_fn: Callable[[GameState], None]):
+        self.draw_internal = draw_fn
+
     def enter(self, state: GameState) -> GameState:
-        raise NotImplementedError
+        state.current_handler = self
+        return state
 
     def leave(self, state: GameState) -> GameState:
         raise NotImplementedError
 
-    def handle_event(self, state: GameState, event: int) -> Tuple[ForwardRef("StateProtocol"), GameState]:
+    def handle_event(self, state: GameState, event: int) -> GameState:
         raise NotImplementedError
 
-    def update(self, state: GameState) -> Tuple[ForwardRef("StateProtocol"), GameState]:
+    def update(self, state: GameState) -> GameState:
         raise NotImplementedError
+
+    def draw(self, state: GameState) -> None:
+        if not self.draw_internal:
+            raise NotImplementedError
+        else:
+            self.draw_internal(state)
 
 
 class GameOverState(StateProtocol):
     def leave(self, state: GameState) -> GameState:
+        state.fall_speed = INITIAL_FALL_SPEED
+        state.occupied_positions = {}
+        state.score = 0
         return state
 
     def enter(self, state: GameState) -> GameState:
-        state.running = False
+        state = super().enter(state)
         return state
 
-    def handle_event(self, state: GameState, event: Any) -> Tuple[StateProtocol, GameState]:
+    def handle_event(self, state: GameState, event: Any) -> GameState:
         """
         :param state: will be mutated
         :param event:
         :return: Tuple new state handler, mutated state
         """
-        return self, state
+        if event.type == pygame.KEYDOWN:
+            # quit
+            if event.key == pygame.K_ESCAPE:
+                state.running = False
+            else:
+                new_state_handler = state.state_handlers[STATE_PLAYING]
+                return new_state_handler.enter(self.leave(state))
+
+        return state
 
     def update(self, state: GameState) -> Tuple[StateProtocol, GameState]:
         """
         :param state: will be mutates
         :return: Tuple new state handler, mutated state
         """
-        return self, state
+        return state
 
 
 class PlayingState(StateProtocol):
@@ -112,12 +143,13 @@ class PlayingState(StateProtocol):
         return state
 
     def enter(self, state: GameState) -> GameState:
+        state = super().enter(state)
         state.current_shape = state.next_shape
         state.next_shape = new_shape()
         state.fall_speed = INITIAL_FALL_SPEED
         return state
 
-    def handle_event(self, state: GameState, event: Any) -> Tuple[StateProtocol, GameState]:
+    def handle_event(self, state: GameState, event: Any) -> GameState:
         """
         :param state: will be mutated
         :param event:
@@ -127,12 +159,11 @@ class PlayingState(StateProtocol):
         if event.type == pygame.KEYDOWN:
             # quit
             if event.key == pygame.K_ESCAPE:
-                new_state_handler = GameOverState()
-                return new_state_handler, new_state_handler.enter(self.leave(state))
+                state.running = False
             else:
                 if event.key == pygame.K_SPACE:
-                    new_state_handler = FallingState()
-                    return new_state_handler, new_state_handler.enter(self.leave(state))
+                    new_state_handler = state.state_handlers[STATE_FALLING]
+                    return new_state_handler.enter(self.leave(state))
                 else:
                     # stearing the shape
                     state.current_shape_copy = copy(state.current_shape)
@@ -147,9 +178,9 @@ class PlayingState(StateProtocol):
                     if not (space_valid_for_shape(state.current_shape, state.occupied_positions)):
                         state.current_shape = state.current_shape_copy
 
-        return self, state
+        return state
 
-    def update(self, state: GameState) -> Tuple[StateProtocol, GameState]:
+    def update(self, state: GameState) -> GameState:
         """
         :param state: will be mutates
         :return: Tuple new state handler, mutated state
@@ -160,29 +191,36 @@ class PlayingState(StateProtocol):
         if not shape_move_successful:
             state = glue_current_shape_and_clear_rows_while_counting_score(state)
             if check_lost(state.occupied_positions):
-                state.running = False
+                new_state_handler = state.state_handlers[STATE_GAME_OVER]
+                return new_state_handler.enter(self.leave(state))
             else:
                 state = self.enter(self.leave(state))
 
-        return self, state
+        return state
 
 
 class FallingState(StateProtocol):
     def enter(self, state: GameState) -> GameState:
+        state = super().enter(state)
         return state
 
     def leave(self, state: GameState) -> GameState:
         return state
 
-    def handle_event(self, state: GameState, event: Any) -> Tuple[StateProtocol, GameState]:
+    def handle_event(self, state: GameState, event: Any) -> GameState:
         """
         :param state: will be mutated
         :param event:
         :return: Tuple new state handler, mutated state
         """
-        return self, state
+        if event.type == pygame.KEYDOWN:
+            # quit
+            if event.key == pygame.K_ESCAPE:
+                state.running = False
 
-    def update(self, state: GameState) -> Tuple[StateProtocol, GameState]:
+        return state
+
+    def update(self, state: GameState) -> GameState:
         """
         :param state: will be mutates
         :return: Tuple new state handler, mutated state
@@ -193,10 +231,11 @@ class FallingState(StateProtocol):
         if not shape_move_successful:
             state = glue_current_shape_and_clear_rows_while_counting_score(state)
             if check_lost(state.occupied_positions):
-                state.running = False
+                new_state_handler = state.state_handlers[STATE_GAME_OVER]
+                return new_state_handler.enter(self.leave(state))
             else:
-                new_state_handler = PlayingState()
+                new_state_handler = state.state_handlers[STATE_PLAYING]
                 state = new_state_handler.enter(self.leave(state))
-                return new_state_handler, state
+                return state
 
-        return self, state
+        return state
