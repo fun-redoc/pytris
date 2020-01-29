@@ -4,6 +4,21 @@ from GameState import *
 from logic import *
 from drawing import *
 
+translation_tab = { pygame.K_SPACE: EVENT_FALL
+                  , pygame.K_LEFT: EVENT_LEFT
+                  , pygame.K_RIGHT: EVENT_RIGHT
+                  , pygame.K_UP: EVENT_ROT_LEFT
+                  , pygame.K_DOWN: EVENT_ROT_RIGHT
+                  , pygame.K_ESCAPE: EVENT_QUIT
+                  }
+
+
+def translate_key_to_event(key: int) -> EventType:
+    try:
+        return translation_tab[key]
+    except KeyError:
+        return EVENT_NONE
+
 
 def pygame_main(game_state):
     win = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -25,7 +40,9 @@ def pygame_main(game_state):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 game_state.running = False
-            game_state = game_state.current_handler.handle_event(game_state, event)
+            else:
+                if event.type == pygame.KEYDOWN:
+                    game_state = game_state.current_handler.handle_event(game_state, translate_key_to_event(event.key))
 
         game_state = game_state.current_handler.update(game_state)
 
@@ -43,7 +60,8 @@ if __name__ == '__main__':
                       }
 
     game_state = GameState( state_handlers=state_handlers
-                           , current_handler= state_handlers[STATE_GAME_OVER].enter(state_handlers[STATE_GAME_OVER])
+                           #, current_handler= state_handlers[STATE_GAME_OVER].enter(state_handlers[STATE_GAME_OVER])
+                           , current_handler= state_handlers[STATE_GAME_OVER]
                            , occupied_positions={}
                            , running=True
                            , current_shape=new_shape()
@@ -51,4 +69,5 @@ if __name__ == '__main__':
                            , fall_time=0
                            , fall_speed=INITIAL_FALL_SPEED
                            )
+    game_state = game_state.current_handler.enter(game_state)
     pygame_main(game_state)

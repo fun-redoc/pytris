@@ -1,11 +1,8 @@
-# from typing import ForwardRef
+from typing import *
 
 from copy import copy
 from dataclasses import dataclass
 
-import pygame
-
-import GameState
 from logic import *
 from itertools import *
 from more_itertools import *
@@ -13,8 +10,8 @@ from more_itertools import *
 
 @dataclass()
 class GameState(object):
-    state_handlers: Dict[str, ForwardRef("StateProtocol")]
-    current_handler: ForwardRef("StateProtocol")
+    state_handlers: Dict[str, Any] #StateProtocol] -- Foreward Declaration needed
+    current_handler: Any #StateProtocol
     occupied_positions: Dict[Tuple[int, int], Shape]
     running: bool
     current_shape: Shape
@@ -90,7 +87,7 @@ class StateProtocol(object):
     def leave(self, state: GameState) -> GameState:
         raise NotImplementedError
 
-    def handle_event(self, state: GameState, event: int) -> GameState:
+    def handle_event(self, state: GameState, event: EventType) -> GameState:
         raise NotImplementedError
 
     def update(self, state: GameState) -> GameState:
@@ -114,19 +111,18 @@ class GameOverState(StateProtocol):
         state = super().enter(state)
         return state
 
-    def handle_event(self, state: GameState, event: Any) -> GameState:
+    def handle_event(self, state: GameState, event: EventType) -> GameState:
         """
         :param state: will be mutated
         :param event:
         :return: Tuple new state handler, mutated state
         """
-        if event.type == pygame.KEYDOWN:
-            # quit
-            if event.key == pygame.K_ESCAPE:
-                state.running = False
-            else:
-                new_state_handler = state.state_handlers[STATE_PLAYING]
-                return new_state_handler.enter(self.leave(state))
+        # quit
+        if event == EVENT_QUIT:
+            state.running = False
+        else:
+            new_state_handler = state.state_handlers[STATE_PLAYING]
+            return new_state_handler.enter(self.leave(state))
 
         return state
 
@@ -149,34 +145,32 @@ class PlayingState(StateProtocol):
         state.fall_speed = INITIAL_FALL_SPEED
         return state
 
-    def handle_event(self, state: GameState, event: Any) -> GameState:
+    def handle_event(self, state: GameState, event: EventType) -> GameState:
         """
         :param state: will be mutated
         :param event:
         :return: Tuple new state handler, mutated state
         """
         # mutating state
-        if event.type == pygame.KEYDOWN:
-            # quit
-            if event.key == pygame.K_ESCAPE:
-                state.running = False
+        if event == EVENT_QUIT:
+            state.running = False
+        else:
+            if event == EVENT_FALL:
+                new_state_handler = state.state_handlers[STATE_FALLING]
+                return new_state_handler.enter(self.leave(state))
             else:
-                if event.key == pygame.K_SPACE:
-                    new_state_handler = state.state_handlers[STATE_FALLING]
-                    return new_state_handler.enter(self.leave(state))
-                else:
-                    # stearing the shape
-                    state.current_shape_copy = copy(state.current_shape)
-                    if event.key == pygame.K_LEFT:
-                        state.current_shape.x -= 1
-                    if event.key == pygame.K_RIGHT:
-                        state.current_shape.x += 1
-                    if event.key == pygame.K_UP:
-                        state.current_shape.rotation -= 1
-                    if event.key == pygame.K_DOWN:
-                        state.current_shape.rotation += 1
-                    if not (space_valid_for_shape(state.current_shape, state.occupied_positions)):
-                        state.current_shape = state.current_shape_copy
+                # stearing the shape
+                state.current_shape_copy = copy(state.current_shape)
+                if event == EVENT_LEFT:
+                    state.current_shape.x -= 1
+                if event == EVENT_RIGHT:
+                    state.current_shape.x += 1
+                if event == EVENT_ROT_LEFT:
+                    state.current_shape.rotation -= 1
+                if event == EVENT_ROT_RIGHT:
+                    state.current_shape.rotation += 1
+                if not (space_valid_for_shape(state.current_shape, state.occupied_positions)):
+                    state.current_shape = state.current_shape_copy
 
         return state
 
@@ -207,16 +201,15 @@ class FallingState(StateProtocol):
     def leave(self, state: GameState) -> GameState:
         return state
 
-    def handle_event(self, state: GameState, event: Any) -> GameState:
+    def handle_event(self, state: GameState, event: EventType) -> GameState:
         """
         :param state: will be mutated
         :param event:
         :return: Tuple new state handler, mutated state
         """
-        if event.type == pygame.KEYDOWN:
-            # quit
-            if event.key == pygame.K_ESCAPE:
-                state.running = False
+        # quit
+        if event == EVENT_QUIT:
+            state.running = False
 
         return state
 
